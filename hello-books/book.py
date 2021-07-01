@@ -12,6 +12,14 @@ books = [{"id": 1, "author": "Brown", "title": "Origin"}, {"id": 2, "author": "R
 
 @bp.route("/")
 def get_all_books():
+    author = request.args.get("author", None)
+    if author:
+        authors_books = []
+        for book in books:
+            if book["author"] == author:
+                authors_books.append(book)
+        return jsonify(authors_books)
+
     return jsonify(books)
 
 
