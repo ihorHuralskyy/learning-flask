@@ -1,15 +1,16 @@
-from flask import (
-    Blueprint, request
-)
+from flask import Blueprint, request
 
 from flask import jsonify, Response
 
 from marshmallow import Schema, fields, ValidationError, validate
 
-bp = Blueprint('book', __name__)
+bp = Blueprint("book", __name__)
 
-books = [{"id": 1, "author": "Brown", "title": "Origin"}, {"id": 2, "author": "Rowling", "title": "Harry Potter"},
-         {"id": 3, "author": "Shevchenko", "title": "Kobzar"}]
+books = [
+    {"id": 1, "author": "Brown", "title": "Origin"},
+    {"id": 2, "author": "Rowling", "title": "Harry Potter"},
+    {"id": 3, "author": "Shevchenko", "title": "Kobzar"},
+]
 
 
 class BookSchema(Schema):
