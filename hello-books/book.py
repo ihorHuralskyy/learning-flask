@@ -17,6 +17,11 @@ def get_all_books():
 
 @bp.route("/<book_id>")
 def get_book_by_id(book_id):
+    try:
+        book_id = int(book_id)
+    except ValueError:
+        return Response(status=400)
+
     for book in books:
         if book["id"] == book_id:
             return jsonify(book)
@@ -46,8 +51,13 @@ def create_book():
     return jsonify(new_book), 201
 
 
-@bp.route("/<book_id>/update", methods=["POST"])
+@bp.route("/<book_id>", methods=["PUT"])
 def update_book(book_id):
+    try:
+        book_id = int(book_id)
+    except ValueError:
+        return Response(status=400)
+
     data = request.get_json()
     author = data.get("author", None)
     title = data.get("title", None)
@@ -64,8 +74,13 @@ def update_book(book_id):
     return Response(status=404)
 
 
-@bp.route("/<book_id>/delete", methods=["DELETE"])
+@bp.route("/<book_id>", methods=["DELETE"])
 def delete_book(book_id):
+    try:
+        book_id = int(book_id)
+    except ValueError:
+        return Response(status=400)
+
     for book in books:
         if book["id"] == book_id:
             books.remove(book)
