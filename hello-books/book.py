@@ -4,20 +4,25 @@ from flask import (
 
 from flask import jsonify, Response
 
+from marshmallow import Schema, fields, ValidationError, validate
+
 bp = Blueprint('book', __name__)
 
 books = [{"id": 1, "author": "Brown", "title": "Origin"}, {"id": 2, "author": "Rowling", "title": "Harry Potter"},
          {"id": 3, "author": "Shevchenko", "title": "Kobzar"}]
 
 
+class BookSchema(Schema):
+    id = fields.Integer(required=True, validate=validate.Range(min=0))
+    author = fields.String(required=True, validate=validate.Length(max=50))
+    title = fields.String(required=True, validate=validate.Length(max=30))
+
+
 @bp.route("/")
 def get_all_books():
     author = request.args.get("author", None)
     if author:
-        authors_books = []
-        for book in books:
-            if book["author"] == author:
-                authors_books.append(book)
+        authors_books = [book for book in books if book["author"] == author]
         return jsonify(authors_books)
 
     return jsonify(books)
@@ -38,45 +43,31 @@ def get_book_by_id(book_id):
 
 @bp.route("/create", methods=["POST"])
 def create_book():
-    book_id = request.json.get("id", None)
-    title = request.json.get("title", None)
-    author = request.json.get("author", None)
-
-    if not book_id or not title or not author:
-        return Response(status=400)
+    try:
+        schema_book = BookSchema().load(request.json)
+    except ValidationError as error:
+        return jsonify(error), 400
 
     for book in books:
-        if book["id"] == book_id:
+        if book["id"] == schema_book["id"]:
             return Response(status=409)
 
-    new_book = {
-        "id": book_id,
-        "author": author,
-        "title": title,
-    }
-    books.append(new_book)
+    books.append(schema_book)
 
-    return jsonify(new_book), 201
+    return jsonify(schema_book), 201
 
 
 @bp.route("/<book_id>", methods=["PUT"])
 def update_book(book_id):
     try:
-        book_id = int(book_id)
-    except ValueError:
-        return Response(status=400)
-
-    data = request.get_json()
-    author = data.get("author", None)
-    title = data.get("title", None)
-
-    if not author or not title:
-        return Response(status=400)
+        schema_book = BookSchema().load({**request.json, "id": book_id})
+    except ValidationError as error:
+        return jsonify(error), 400
 
     for book in books:
-        if book["id"] == book_id:
-            book["author"] = author
-            book["title"] = title
+        if book["id"] == schema_book["id"]:
+            book["author"] = schema_book["author"]
+            book["title"] = schema_book["title"]
             return jsonify(book), 200
 
     return Response(status=404)
