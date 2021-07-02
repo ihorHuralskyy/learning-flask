@@ -2,15 +2,9 @@ from flask import Blueprint, request
 
 from flask import jsonify, abort
 
-from marshmallow import ValidationError
 from .book_schemas import BookSchema, AuthorFilterSchema, BookIdSchema
-from .book_error_handlers import book_validation_error, book_general_exception, book_404
 
 bp = Blueprint("book", __name__, url_prefix="/books")
-
-bp.register_error_handler(ValidationError, book_validation_error)
-bp.register_error_handler(Exception, book_general_exception)
-bp.register_error_handler(404, book_404)
 
 books = [
     {"id": 1, "author": "Brown", "title": "Origin"},
