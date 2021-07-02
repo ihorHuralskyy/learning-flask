@@ -4,7 +4,7 @@ from flask import jsonify, Response
 
 from marshmallow import Schema, fields, ValidationError, validate
 
-bp = Blueprint("book", __name__)
+bp = Blueprint("book", __name__, url_prefix="/books")
 
 books = [
     {"id": 1, "author": "Brown", "title": "Origin"},
@@ -19,7 +19,7 @@ class BookSchema(Schema):
     title = fields.String(required=True, validate=validate.Length(max=30))
 
 
-@bp.route("/")
+@bp.route("/", methods=["GET"])
 def get_all_books():
     author = request.args.get("author", None)
     if author:
@@ -29,7 +29,7 @@ def get_all_books():
     return jsonify(books)
 
 
-@bp.route("/<book_id>")
+@bp.route("/<book_id>", methods=["GET"])
 def get_book_by_id(book_id):
     try:
         book_id = int(book_id)
@@ -42,7 +42,7 @@ def get_book_by_id(book_id):
     return Response(status=404)
 
 
-@bp.route("/create", methods=["POST"])
+@bp.route("/", methods=["POST"])
 def create_book():
     try:
         schema_book = BookSchema().load(request.json)
