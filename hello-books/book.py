@@ -1,10 +1,16 @@
 from flask import Blueprint, request
 
-from flask import jsonify, Response
+from flask import jsonify, abort
 
-from marshmallow import Schema, fields, ValidationError, validate
+from marshmallow import ValidationError
+from .book_schemas import BookSchema, AuthorFilterSchema, BookIdSchema
+from .book_error_handlers import book_validation_error, book_general_exception, book_404
 
 bp = Blueprint("book", __name__, url_prefix="/books")
+
+bp.register_error_handler(ValidationError, book_validation_error)
+bp.register_error_handler(Exception, book_general_exception)
+bp.register_error_handler(404, book_404)
 
 books = [
     {"id": 1, "author": "Brown", "title": "Origin"},
@@ -13,77 +19,67 @@ books = [
 ]
 
 
-class BookSchema(Schema):
-    id = fields.Integer(required=True, validate=validate.Range(min=0))
-    author = fields.String(required=True, validate=validate.Length(max=50))
-    title = fields.String(required=True, validate=validate.Length(max=30))
-
-
 @bp.route("/", methods=["GET"])
 def get_all_books():
-    author = request.args.get("author", None)
-    if author:
-        authors_books = [book for book in books if book["author"] == author]
-        return jsonify(authors_books)
+    if request.args.get("author", None):
+        schema_author = AuthorFilterSchema().load(request.args)
+        authors_books = [
+            book for book in books if book["author"] == schema_author["author"]
+        ]
+        return jsonify(BookSchema(many=True).dump(authors_books))
 
-    return jsonify(books)
+    return jsonify(BookSchema(many=True).dump(books))
 
 
 @bp.route("/<book_id>", methods=["GET"])
 def get_book_by_id(book_id):
-    try:
-        book_id = int(book_id)
-    except ValueError:
-        return Response(status=400)
+    book_id_dict = {"id": book_id}
+    book_id_schema = BookIdSchema().load(book_id_dict)
 
     for book in books:
-        if book["id"] == book_id:
-            return jsonify(book)
-    return Response(status=404)
+        if book["id"] == book_id_schema["id"]:
+            return BookSchema().load(book)
+
+    abort(404, description=f"no book with id:{book_id_schema['id']}")
 
 
 @bp.route("/", methods=["POST"])
 def create_book():
-    try:
-        schema_book = BookSchema().load(request.json)
-    except ValidationError as error:
-        return jsonify(error), 400
+
+    schema_book = BookSchema().load(request.json)
 
     for book in books:
         if book["id"] == schema_book["id"]:
-            return Response(status=409)
+            message = {"error": f"book with id:{schema_book['id']} already exists"}
+            return message, 409
 
     books.append(schema_book)
 
-    return jsonify(schema_book), 201
+    return schema_book, 201
 
 
 @bp.route("/<book_id>", methods=["PUT"])
 def update_book(book_id):
-    try:
-        schema_book = BookSchema().load({**request.json, "id": book_id})
-    except ValidationError as error:
-        return jsonify(error), 400
+    schema_book_dict = {"id": book_id, **request.json}
+    schema_book = BookSchema().load(schema_book_dict)
 
     for book in books:
         if book["id"] == schema_book["id"]:
             book["author"] = schema_book["author"]
             book["title"] = schema_book["title"]
-            return jsonify(book), 200
+            return schema_book, 200
 
-    return Response(status=404)
+    abort(404, description=f"no book with id:{schema_book['id']}")
 
 
 @bp.route("/<book_id>", methods=["DELETE"])
 def delete_book(book_id):
-    try:
-        book_id = int(book_id)
-    except ValueError:
-        return Response(status=400)
+    book_id_dict = {"id": book_id}
+    book_id_schema = BookIdSchema().load(book_id_dict)
 
     for book in books:
-        if book["id"] == book_id:
+        if book["id"] == book_id_schema["id"]:
             books.remove(book)
-            return jsonify(book), 200
+            return BookSchema().load(book)
 
-    return Response(status=404)
+    abort(404, description=f"no book with id:{book_id_schema['id']}")
