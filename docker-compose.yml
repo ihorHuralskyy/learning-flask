@@ -1,0 +1,7 @@
+version: "3.8"
+services:
+  hello_books:
+    build: .
+    command: flask run --host=0.0.0.0
+    ports:
+    - "5000:5000"
