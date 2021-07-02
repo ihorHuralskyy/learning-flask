@@ -16,6 +16,7 @@ books = [
     {"id": 1, "author": "Brown", "title": "Origin"},
     {"id": 2, "author": "Rowling", "title": "Harry Potter"},
     {"id": 3, "author": "Shevchenko", "title": "Kobzar"},
+    {"id": 4, "author": "Brown", "title": "Inferno"},
 ]
 
 
@@ -45,7 +46,6 @@ def get_book_by_id(book_id):
 
 @bp.route("/", methods=["POST"])
 def create_book():
-
     schema_book = BookSchema().load(request.json)
 
     for book in books:
