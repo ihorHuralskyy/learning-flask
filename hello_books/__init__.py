@@ -4,8 +4,8 @@ from flask import Flask
 def create_app():
     app = Flask(__name__)
 
-    from . import book
+    from .book import bp
 
-    app.register_blueprint(book.bp)
+    app.register_blueprint(bp)
 
     return app
