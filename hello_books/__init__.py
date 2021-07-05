@@ -1,6 +1,7 @@
 from flask import Flask
 from .book_error_handlers import book_validation_error, book_general_exception, book_404
 from marshmallow import ValidationError
+
 # from functools import partial
 
 
