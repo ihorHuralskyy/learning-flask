@@ -5,3 +5,9 @@ services:
     command: flask run --host=0.0.0.0
     ports:
     - "5000:5000"
+  postgres:
+    image: postgres:13
+    env_file:
+      - database.env
+    ports:
+      - '5432:5432'
