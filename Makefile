@@ -16,3 +16,11 @@ format: venv
 
 clean:
 	rm -rf $(VENV_NAME)
+
+
+venvV: env/bin/activate
+env/bin/activate: requirements.txt
+	test -d env || python3 -m venv env
+	env/bin/pip install --upgrade pip pip-tools
+	env/bin/pip install -Ur requirements.txt
+	touch env/bin/activate

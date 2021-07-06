@@ -1,21 +1,29 @@
 from hello_books import db
-
-book_author = db.Table(
-    "book_author",
-    db.Column("book_id", db.Integer, db.ForeignKey("book.id"), primary_key=True),
-    db.Column("author_id", db.Integer, db.ForeignKey("author.id"), primary_key=True),
-)
+from sqlalchemy.sql import func
 
 
-class Book(db.Model):
+class BaseModel(db.Model):
+    __abstract__ = True
     id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(db.DateTime, onupdate=func.now())
+
+
+class Book(BaseModel):
+    __tablename__ = "book"
     title = db.Column(db.String(50))
     pages = db.Column(db.Integer)
-    authors = db.relationship(
-        "Author", secondary=book_author, backref=db.backref("books", lazy="dynamic")
-    )
+    authors = db.relationship("Author", backref=db.backref("books", lazy="dynamic"))
 
 
-class Author(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fullname = db.Column(db.String(70))
+class Author(BaseModel):
+    __tablename__ = "author"
+    firstname = db.Column(db.String(50))
+    lastname = db.Column(db.String(50))
+    fullname = db.column_property(firstname + " " + lastname)
+
+
+class BookAuthor(BaseModel):
+    __tablename__ = "book_author"
+    book_id = db.Column(db.Integer, db.ForeignKey("book.id"))
+    author_id = db.Column(db.Integer, db.ForeignKey("author.id"))

@@ -29,7 +29,7 @@ def create_app():
     app.register_error_handler(404, book_404)
 
     with app.app_context():
-        from .models import Author, Book, book_author
+        from .models import Author, Book, BookAuthor
 
         db.create_all()
 
