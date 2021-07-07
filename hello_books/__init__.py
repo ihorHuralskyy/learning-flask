@@ -1,5 +1,5 @@
 from flask import Flask
-from .book_error_handlers import book_validation_error, book_general_exception, book_404
+from .error_handlers import validation_error, general_exception, entity_404
 from marshmallow import ValidationError
 from settings import SQLALCHEMY_DATABASE_URI
 from flask_sqlalchemy import SQLAlchemy
@@ -16,17 +16,20 @@ def create_app():
 
     db.init_app(app)
 
-    from .book import bp
+    from .book import book_bp
 
-    app.register_blueprint(bp)
+    app.register_blueprint(book_bp)
 
+    from .author import author_bp
+
+    app.register_blueprint(author_bp)
     # app.register_error_handler(
     #     ValidationError, partial(error_handler, status_code=codes.bad_request)
     # )
 
-    app.register_error_handler(ValidationError, book_validation_error)
-    app.register_error_handler(Exception, book_general_exception)
-    app.register_error_handler(404, book_404)
+    app.register_error_handler(ValidationError, validation_error)
+    app.register_error_handler(Exception, general_exception)
+    app.register_error_handler(404, entity_404)
 
     with app.app_context():
         from .models import Author, Book, BookAuthor
