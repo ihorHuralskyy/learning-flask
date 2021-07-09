@@ -1,79 +1,101 @@
 from flask import Blueprint, request
 
+import werkzeug
+
 from flask import jsonify, abort
 
-from .book_schemas import BookSchema, AuthorFilterSchema, BookIdSchema
+from .schemas import (
+    BookSchema,
+    AuthorFilterSchema,
+    BookIdSchema,
+    BookNestedSchema,
+    AuthorIdSchema,
+    BookInputSchema,
+)
 
-bp = Blueprint("book", __name__, url_prefix="/books")
+from . import book_db_utils as book_db
 
-books = [
-    {"id": 1, "author": "Brown", "title": "Origin"},
-    {"id": 2, "author": "Rowling", "title": "Harry Potter"},
-    {"id": 3, "author": "Shevchenko", "title": "Kobzar"},
-    {"id": 4, "author": "Brown", "title": "Inferno"},
-]
+from . import author_db_utils as author_db
+
+book_bp = Blueprint("book", __name__, url_prefix="/books")
 
 
-@bp.route("/", methods=["GET"])
+@book_bp.route("/", methods=["GET"])
 def get_all_books():
-    if request.args.get("author", None):
+    if request.args.get("author_fullname", None):
         schema_author = AuthorFilterSchema().load(request.args)
-        authors_books = [
-            book for book in books if book["author"] == schema_author["author"]
-        ]
+        authors_books = book_db.get_all_books_by_author(
+            schema_author["author_fullname"]
+        )
         return jsonify(BookSchema(many=True).dump(authors_books))
 
+    books = book_db.get_all_books()
     return jsonify(BookSchema(many=True).dump(books))
 
 
-@bp.route("/<book_id>", methods=["GET"])
+@book_bp.route("/<book_id>", methods=["GET"])
 def get_book_by_id(book_id):
     book_id_dict = {"id": book_id}
     book_id_schema = BookIdSchema().load(book_id_dict)
 
-    for book in books:
-        if book["id"] == book_id_schema["id"]:
-            return BookSchema().load(book)
+    book = book_db.get_book_by_id(book_id_schema["id"])
 
-    abort(404, description=f"no book with id:{book_id_schema['id']}")
+    return BookSchema().dump(book)
 
 
-@bp.route("/", methods=["POST"])
+@book_bp.route("/", methods=["POST"])
 def create_book():
-    schema_book = BookSchema().load(request.json)
-
-    for book in books:
-        if book["id"] == schema_book["id"]:
-            message = {"error": f"book with id:{schema_book['id']} already exists"}
-            return message, 409
-
-    books.append(schema_book)
-
-    return schema_book, 201
+    schema_book = BookInputSchema().load(request.json)
+    created_book = book_db.create_book(schema_book)
+    output_book = BookSchema().dump(created_book)
+    return output_book, 201
 
 
-@bp.route("/<book_id>", methods=["PUT"])
+@book_bp.route("/<book_id>", methods=["PUT"])
 def update_book(book_id):
     schema_book_dict = {"id": book_id, **request.json}
-    schema_book = BookSchema().load(schema_book_dict)
+    schema_book = BookNestedSchema().load(schema_book_dict)
 
-    for book in books:
-        if book["id"] == schema_book["id"]:
-            book["author"] = schema_book["author"]
-            book["title"] = schema_book["title"]
-            return schema_book, 200
+    book_db.update_book(**schema_book)
 
-    abort(404, description=f"no book with id:{schema_book['id']}")
+    return schema_book, 200
 
 
-@bp.route("/<book_id>", methods=["DELETE"])
+@book_bp.route("/<book_id>", methods=["DELETE"])
 def delete_book(book_id):
     book_id_dict = {"id": book_id}
     book_id_schema = BookIdSchema().load(book_id_dict)
 
-    for book in books:
-        if book["id"] == book_id_schema["id"]:
-            books.remove(book)
-            return BookSchema().load(book)
+    book = book_db.delete_book(book_id_schema["id"])
 
-    abort(404, description=f"no book with id:{book_id_schema['id']}")
+    return BookSchema().dump(book)
+
+
+@book_bp.route("/<book_id>/authors/<author_id>", methods=["PUT"])
+def add_author_for_book(book_id, author_id):
+    book_id_dict = {"id": book_id}
+    book_id_schema = BookIdSchema().load(book_id_dict)
+    author_id_dict = {"id": author_id}
+    author_id_schema = AuthorIdSchema().load(author_id_dict)
+    author = author_db.get_author_by_id(author_id_schema["id"])
+
+    book_db.add_relation_for_book(book_id_schema["id"], author)
+
+    book = book_db.get_book_by_id(book_id_schema["id"])
+
+    return BookSchema().dump(book), 200
+
+
+@book_bp.route("/<book_id>/authors/<author_id>", methods=["DELETE"])
+def remove_author_for_book(book_id, author_id):
+    book_id_dict = {"id": book_id}
+    book_id_schema = BookIdSchema().load(book_id_dict)
+    author_id_dict = {"id": author_id}
+    author_id_schema = AuthorIdSchema().load(author_id_dict)
+    author = author_db.get_author_by_id(author_id_schema["id"])
+
+    book_db.remove_relation_for_book(book_id_schema["id"], author)
+
+    book = book_db.get_book_by_id(book_id_schema["id"])
+
+    return BookSchema().dump(book)
