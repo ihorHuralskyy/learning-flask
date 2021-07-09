@@ -21,6 +21,7 @@ class Book(BaseModel):
         backref=db.backref("books", lazy="dynamic"),
         uselist=True,
     )
+    __table_args__ = (db.UniqueConstraint("title", "pages"),)
 
 
 class Author(BaseModel):
@@ -28,7 +29,7 @@ class Author(BaseModel):
     firstname = db.Column(db.String(50))
     lastname = db.Column(db.String(50))
     fullname = db.column_property(firstname + " " + lastname)
-    # __table_args__ = (UniqueConstraint('fullname'), )
+    __table_args__ = (db.UniqueConstraint("firstname", "lastname"),)
 
 
 class BookAuthor(BaseModel):
